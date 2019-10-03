@@ -1,0 +1,87 @@
+import numpy as np
+import seaborn as sns
+from scipy.stats import norm
+import matplotlib.pyplot as plt
+import pandas as pd
+
+## Update number of games each week
+games = 27
+p = .5
+pool_size = 37
+
+#################################################################
+#################################################################
+#################################################################
+
+## Generate and Compare the Expected Distribution
+
+## Generate Random Distribution Predictions
+random_sample = np.random.binomial(games,p,100000)
+random_sample = pd.DataFrame(random_sample)
+random_sample.columns = ['Estimated']
+prob = random_sample.Estimated.value_counts(normalize=True,sort=False)
+
+## Estimate Predicted Distribution
+est_wins = prob * pool_size
+est_wins = pd.DataFrame(est_wins)
+est_wins
+
+## Import Actual Data
+data = pd.read_csv('actual_predictions.csv')
+wins = data.Actual.value_counts().sort_index()
+wins = pd.DataFrame(wins)
+wins
+
+## Merge Real and Estimated Data
+combined = est_wins.join(wins)
+combined = combined.fillna(0)
+combined['Number_Correct']=combined.index
+combined.sum()
+
+## Melt Data
+combined_melt = pd.melt(combined, id_vars='Number_Correct',var_name='Number_of_People')
+combined_melt
+
+## Graphically Compare Distributions
+ax = sns.barplot(x='Number_Correct',y='value',hue='Number_of_People',data=combined_melt)
+ax.set(ylabel='Count')
+plt.style.use('ggplot')
+plt.show()
+
+## Save Graph
+fig = ax.get_figure()
+fig.savefig('week_5.png')
+
+#################################################################
+#################################################################
+#################################################################
+
+## Generate Distributions and Compare to Random Case
+
+## Null Hypothesis - our picks are no better than random
+
+## Create Random Comparison Samples
+comparison_sample = np.random.binomial(games*pool_size,p,100000)
+comparison_sample = pd.DataFrame(comparison_sample)
+comparison_sample.columns = ['Frequency']
+dist = comparison_sample.Frequency.value_counts().sort_index()
+dist = pd.DataFrame(dist)
+dist['Random_Correct']=dist.index
+dist
+
+## Actual Total Correct Data
+data = pd.read_csv('actual_predictions.csv')
+actual_correct = data.Actual.sum()
+
+## Compare Actual Correct to Simulated Sample
+p = np.sum(comparison_sample['Frequency'] >= np.mean(actual_correct)) / len(comparison_sample)
+p
+
+## Plot Estimated and Actual Data
+plt.bar(dist['Random_Correct'], dist['Frequency'],color='g',alpha=.7)
+plt.ylabel('Frequency')
+plt.xlabel('Green is Random Distribution of the Total Correct \nRed is Actual Correct')
+plt.axvline(x=actual_correct, c='r',lw=2)
+plt.title('The p-statistic is \n{}'.format(p))
+plt.savefig('week_5_total.png')
+plt.show()
